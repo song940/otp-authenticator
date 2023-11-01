@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="utf-8">
-  <title>Liu Song’s Pages</title>
+  <title>OTP Authenticator</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta name="description" content="homepage, blog, music and etc.">
   <meta name="author" content="Lsong">
@@ -27,7 +27,7 @@
     <header class="header">
       <a href="/" class="heading">
         <img src="https://lsong.org/icon.svg" alt="logo" class="logo">
-        <h1><b>Liu Song’s </b>Pages</h1>
+        <h1>OTP Authenticator</h1>
       </a>
       <nav class="nav nav-bar">
         <a href="//lsong.org">home</a>
@@ -57,7 +57,12 @@
         </p>
       </section>
 
-      <section id="app"></section>
+      <section id="app">
+        <h2>OTP Authenticator</h2>
+        <input type="text" id="otpauth" placeholder="Enter otpauth:// URL" value="otpauth://totp/john.doe?secret=N2SJSUOXCKQM5MAX7N7J3NBUQ4WTL66G&issuer=example.org">
+        <button id="gen">Generate TOTP</button>
+        <div id="result"></div>
+      </section>
 
       <hr />
       <section id="subscribe" class="subscribe">
