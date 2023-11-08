@@ -1,4 +1,5 @@
 import { ready } from 'https://lsong.org/scripts/dom.js';
+import { h, render, useState, useEffect } from 'https://lsong.org/scripts/react/index.js';
 
 import "https://lsong.org/js/application.js";
 
@@ -18,12 +19,12 @@ export function base32ToBuffer(base32) {
   return result;
 }
 
-export async function computeHMAC(key, message) {
+export async function computeHMAC(key, data) {
   const cryptoKey = await crypto.subtle.importKey('raw', key, {
     name: 'HMAC',
     hash: 'SHA-1',
   }, false, ['sign']);
-  return crypto.subtle.sign('HMAC', cryptoKey, message);
+  return crypto.subtle.sign('HMAC', cryptoKey, data);
 }
 
 export async function generateTOTP(secret) {
@@ -38,15 +39,79 @@ export async function generateTOTP(secret) {
   return code;
 }
 
-ready(() => {
-  const btn = document.getElementById('gen');
-  const otpauth = document.getElementById('otpauth');
+function useLocalStorageState(key, defaultValue) {
+  const [state, setState] = useState(defaultValue);
+  const storedValue = localStorage.getItem(key);
+  useEffect(() => {
+    setState(storedValue !== null ? JSON.parse(storedValue) : defaultValue);
+  }, []);
+  useEffect(() => {
+    localStorage.setItem(key, JSON.stringify(state));
+  }, [key, state]);
+  return [state, setState];
+}
+const SiteItem = ({ site }) => {
+  const [otp, setOtp] = useState('');
+  // Function to update the OTP for this site
+  const generateOtp = async () => {
+    const newOtp = await generateTOTP(site.secret);
+    setOtp(newOtp);
+  };
+  useEffect(() => {
+    // Generate an OTP immediately
+    generateOtp();
+    // Calculate the remaining time until the next 30-second period
+    const epoch = Math.floor(Date.now() / 1000);
+    const remaining = 30 - (epoch % 30);
+    // Set up a timeout to align the OTP generation with the 30-second period
+    const timeoutId = setTimeout(() => {
+      generateOtp();
+      // After aligning, set up an interval to update the OTP every 30 seconds
+      setInterval(generateOtp, 30000);
+    }, remaining * 1000);
+    // Clear the timeout and interval when the component is unmounted
+    return () => {
+      clearTimeout(timeoutId);
+      clearInterval(intervalId);
+    };
+  }, [site]);
+  return h('li', null, `${site.issuer}: ${otp}`);
+};
 
-  btn.addEventListener('click', async () => {
-    const url = new URL(otpauth.value);
+const App = () => {
+  const [otpAuthUrl, setOtpAuthUrl] = useState('otpauth://totp/john.doe?secret=N2SJSUOXCKQM5MAX7N7J3NBUQ4WTL66G&issuer=example.org');
+  const [sites, setSites] = useLocalStorageState('sites', []);
+  const onSubmit = e => {
+    e.preventDefault();
+    const url = new URL(otpAuthUrl);
     const params = new URLSearchParams(url.search);
+    const issuer = params.get('issuer');
     const secret = params.get('secret');
-    const code = await generateTOTP(secret);
-    document.getElementById('result').textContent = code;
-  });
+    if (issuer && secret) {
+      setSites([...sites, { issuer, secret, otpAuthUrl }]);
+      setOtpAuthUrl(''); // Clear the input after adding
+    } else {
+      console.error('Issuer or secret is missing in the URL');
+    }
+  };
+  return h('div', null, [
+    h('h2', null, "OTP Authenticator"),
+    h('ul', null, sites.map((site, index) =>
+      h(SiteItem, { key: index, site })
+    )),
+    h('form', { onSubmit }, [
+      h('input', {
+        name: "otpauth",
+        value: otpAuthUrl,
+        placeholder: "Enter otpauth URL",
+        onChange: e => setOtpAuthUrl(e.target.value)
+      }),
+      h('button', { type: "submit" }, "Add Site")
+    ])
+  ]);
+};
+
+ready(() => {
+  const app = document.getElementById('app');
+  render(h(App), app);
 });
