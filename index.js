@@ -1,14 +1,8 @@
 import "https://lsong.org/js/application.js";
 import { ready } from 'https://lsong.org/scripts/dom.js';
 import { base32decode } from 'https://lsong.org/scripts/crypto/base32.js';
+import { sha1 } from 'https://lsong.org/scripts/crypto.js';
 import { h, render, useState, useEffect, useLocalStorageState } from 'https://lsong.org/scripts/react/index.js';
-
-// HMAC-SHA1 implementation (unchanged)
-async function sha1(message) {
-  const msgUint8 = new TextEncoder().encode(message);
-  const hashBuffer = await crypto.subtle.digest('SHA-1', msgUint8);
-  return new Uint8Array(hashBuffer);
-}
 
 async function hmacSha1(key, message) {
   const blockSize = 64;
