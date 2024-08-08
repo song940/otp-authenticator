@@ -1,39 +1,15 @@
 import "https://lsong.org/js/application.js";
 import { ready } from 'https://lsong.org/scripts/dom.js';
+import { sha1hmac } from 'https://lsong.org/scripts/crypto.js';
 import { base32decode } from 'https://lsong.org/scripts/crypto/base32.js';
-import { sha1 } from 'https://lsong.org/scripts/crypto.js';
 import { h, render, useState, useEffect, useLocalStorageState } from 'https://lsong.org/scripts/react/index.js';
-
-async function hmacSha1(key, message) {
-  const blockSize = 64;
-  const keyUint8 = new Uint8Array(key);
-  
-  if (keyUint8.length > blockSize) {
-    key = await sha1(key);
-  }
-
-  const keyPadded = new Uint8Array(blockSize);
-  keyPadded.set(keyUint8);
-
-  const oKeyPad = new Uint8Array(blockSize);
-  const iKeyPad = new Uint8Array(blockSize);
-  for (let i = 0; i < blockSize; i++) {
-    oKeyPad[i] = 0x5c ^ keyPadded[i];
-    iKeyPad[i] = 0x36 ^ keyPadded[i];
-  }
-
-  const innerHash = await sha1(new Uint8Array([...iKeyPad, ...new TextEncoder().encode(message)]));
-  const result = await sha1(new Uint8Array([...oKeyPad, ...innerHash]));
-  
-  return result;
-}
 
 async function generateTOTP(secret) {
   const epoch = Math.floor(Date.now() / 1000);
   const time = new Uint8Array(8);
   new DataView(time.buffer).setUint32(4, Math.floor(epoch / 30), false);
   const key = base32decode(secret);
-  const hmac = await hmacSha1(key, time);
+  const hmac = await sha1hmac(key, time);
   const offset = hmac[19] & 0xf;
   const otp = new DataView(hmac.buffer).getUint32(offset) & 0x7fffffff;
   return (otp % 1000000).toString().padStart(6, '0');
